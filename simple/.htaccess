@@ -1,0 +1,28 @@
+# Dosya dizinine doğrudan erişimi engelle
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^files/ - [F,L]
+    RewriteRule ^data/ - [F,L]
+</IfModule>
+
+<IfModule mod_php.c>
+    php_value upload_max_filesize 10G
+    php_value post_max_size 10G
+    php_value max_execution_time 7200
+    php_value max_input_time 7200
+    php_value memory_limit 512M
+</IfModule>
+
+Options -Indexes
+
+<FilesMatch "download\.php$">
+    <IfModule mod_headers.c>
+        Header set X-Robots-Tag "noindex, nofollow"
+    </IfModule>
+</FilesMatch>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>
