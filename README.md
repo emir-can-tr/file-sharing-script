@@ -5,6 +5,8 @@ Modern ve güvenli PHP dosya paylaşım scripti. Büyük dosyaları parçalara b
 ![PHP](https://img.shields.io/badge/PHP-7.4+-777BB4?style=flat-square&logo=php&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
+[Türkçe](README.md) | [English](README.en.md) 
+
 ## İki Versiyon
 
 | Versiyon | Açıklama | Dosya Limiti |
