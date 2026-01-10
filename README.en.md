@@ -5,7 +5,7 @@ Modern and secure PHP file sharing script. Uploads large files in chunks, includ
 ![PHP](https://img.shields.io/badge/PHP-7.4+-777BB4?style=flat-square&logo=php&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
 
-[Türkçe](README.md) | English
+[Türkçe](README.md) | [English](README.en.md) 
 
 ## Features
 
