@@ -1,0 +1,10 @@
+User-agent: *
+Disallow: /files/
+Disallow: /download.php
+Disallow: /admin.php
+Disallow: /upload_handler.php
+Disallow: /data/
+Disallow: /temp/
+Disallow: /config.php
+
+Sitemap: https://yourdomain.com/sitemap.xml

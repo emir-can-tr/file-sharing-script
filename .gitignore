@@ -1,0 +1,25 @@
+# Yüklenen dosyalar
+files/*
+!files/.gitkeep
+
+# Veri dosyaları
+data/*
+!data/.gitkeep
+
+# Geçici dosyalar
+temp/*
+!temp/.gitkeep
+
+# PHP ayar dosyaları (her sunucuda farklı olabilir)
+php.ini
+.user.ini
+
+# IDE dosyaları
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS dosyaları
+.DS_Store
+Thumbs.db
