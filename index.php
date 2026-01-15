@@ -3,6 +3,7 @@ require_once 'config.php';
 
 $files = getFiles();
 
+// Son yüklenen dosyalar (en son 10 tanesi, şifresiz olanlar)
 $recentFiles = array_filter($files, fn($f) => !$f['has_password']);
 usort($recentFiles, fn($a, $b) => strtotime($b['upload_date']) - strtotime($a['upload_date']));
 $recentFiles = array_slice($recentFiles, 0, 10);
@@ -13,16 +14,49 @@ $recentFiles = array_slice($recentFiles, 0, 10);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Dosyalarınızı hızlı ve güvenli paylaşın. Ücretsiz dosya yükleme ve paylaşma servisi.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23667eea'><path d='M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z'/></svg>">
     <title><?= SITE_NAME ?> - Dosya Paylaşım</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .progress-container { display: none; margin-top: 20px; }
-        .progress-bar { width: 100%; height: 30px; background: rgba(255,255,255,0.1); border-radius: 15px; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); width: 0%; transition: width 0.3s ease; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 0.9rem; }
-        .progress-text { margin-top: 10px; text-align: center; color: #a0a0a0; font-size: 0.9rem; }
-        .upload-speed { color: #667eea; }
-        .btn-cancel { background: #dc3545; margin-top: 15px; }
-        .btn-cancel:hover { background: #c82333; }
+        .progress-container {
+            display: none;
+            margin-top: 20px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .progress-text {
+            margin-top: 10px;
+            text-align: center;
+            color: #a0a0a0;
+            font-size: 0.9rem;
+        }
+        .upload-speed {
+            color: #667eea;
+        }
+        .btn-cancel {
+            background: #dc3545;
+            margin-top: 15px;
+        }
+        .btn-cancel:hover {
+            background: #c82333;
+        }
     </style>
 </head>
 <body>
@@ -43,7 +77,7 @@ $recentFiles = array_slice($recentFiles, 0, 10);
                     <div class="drop-zone-text" id="dropZoneText">
                         <span class="icon">📁</span>
                         <p>Dosyayı buraya sürükleyin veya tıklayın</p>
-                        <p class="hint">Sunucu limitine kadar yükleyebilirsiniz</p>
+                        <p class="hint">10 GB'a kadar yükleyebilirsiniz</p>
                     </div>
                     <div class="file-info" id="fileInfo" style="display: none;"></div>
                 </div>
@@ -96,7 +130,7 @@ $recentFiles = array_slice($recentFiles, 0, 10);
     </div>
 
     <script>
-        const CHUNK_SIZE = 25 * 1024 * 1024;
+        const CHUNK_SIZE = 25 * 1024 * 1024; // 25MB parçalar (dengeli)
         let currentUpload = null;
         let uploadCancelled = false;
 
@@ -115,9 +149,18 @@ $recentFiles = array_slice($recentFiles, 0, 10);
         const messageContainer = document.getElementById('messageContainer');
         const csrfToken = document.getElementById('csrfToken').value;
 
+        // Drag & Drop
         dropZone.addEventListener('click', () => fileInput.click());
-        dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-        dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('dragover'); });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
         dropZone.addEventListener('drop', (e) => {
             e.preventDefault();
             dropZone.classList.remove('dragover');
@@ -128,11 +171,14 @@ $recentFiles = array_slice($recentFiles, 0, 10);
         });
 
         fileInput.addEventListener('change', (e) => {
-            if (e.target.files[0]) showFileInfo(e.target.files[0]);
+            if (e.target.files[0]) {
+                showFileInfo(e.target.files[0]);
+            }
         });
 
         function showFileInfo(file) {
-            fileInfo.innerHTML = `<strong>${file.name}</strong> (${formatBytes(file.size)})`;
+            const size = formatBytes(file.size);
+            fileInfo.innerHTML = `<strong>${file.name}</strong> (${size})`;
             fileInfo.style.display = 'block';
             dropZoneText.style.display = 'none';
         }
@@ -167,79 +213,136 @@ $recentFiles = array_slice($recentFiles, 0, 10);
             messageContainer.innerHTML = `<div class="message ${type}">${text}</div>`;
         }
 
+        // Form submit
         uploadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+
             const file = fileInput.files[0];
-            if (!file) { showMessage('Lütfen bir dosya seçin.', 'error'); return; }
+            if (!file) {
+                showMessage('Lütfen bir dosya seçin.', 'error');
+                return;
+            }
 
             uploadCancelled = false;
             const password = document.getElementById('password').value;
             const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
+            // UI güncelle
             uploadBtn.style.display = 'none';
             passwordSection.style.display = 'none';
             progressContainer.style.display = 'block';
             messageContainer.innerHTML = '';
 
             try {
+                // 1. Upload başlat
                 const initResponse = await fetch('upload_handler.php', {
                     method: 'POST',
-                    body: new URLSearchParams({ action: 'init', csrf_token: csrfToken, fileName: file.name, fileSize: file.size, totalChunks: totalChunks, password: password })
+                    body: new URLSearchParams({
+                        action: 'init',
+                        csrf_token: csrfToken,
+                        fileName: file.name,
+                        fileSize: file.size,
+                        totalChunks: totalChunks,
+                        password: password
+                    })
                 });
+
                 const initData = await initResponse.json();
-                if (!initData.success) throw new Error(initData.error);
+                if (!initData.success) {
+                    throw new Error(initData.error);
+                }
 
                 currentUpload = initData.uploadId;
                 let uploadedBytes = 0;
                 let startTime = Date.now();
 
+                // 2. Parçaları yükle
                 for (let i = 0; i < totalChunks; i++) {
-                    if (uploadCancelled) throw new Error('Yükleme iptal edildi.');
+                    if (uploadCancelled) {
+                        throw new Error('Yükleme iptal edildi.');
+                    }
+
                     const start = i * CHUNK_SIZE;
                     const end = Math.min(start + CHUNK_SIZE, file.size);
                     const chunk = file.slice(start, end);
+
                     const formData = new FormData();
                     formData.append('action', 'chunk');
                     formData.append('csrf_token', csrfToken);
                     formData.append('uploadId', currentUpload);
                     formData.append('chunkIndex', i);
                     formData.append('chunk', chunk);
-                    const chunkResponse = await fetch('upload_handler.php', { method: 'POST', body: formData });
+
+                    const chunkResponse = await fetch('upload_handler.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+
                     const chunkData = await chunkResponse.json();
-                    if (!chunkData.success) throw new Error(chunkData.error);
+                    if (!chunkData.success) {
+                        throw new Error(chunkData.error);
+                    }
+
                     uploadedBytes += chunk.size;
                     const percent = Math.round((uploadedBytes / file.size) * 100);
                     progressFill.style.width = percent + '%';
                     progressFill.textContent = percent + '%';
+
+                    // Hız hesapla
                     const elapsed = (Date.now() - startTime) / 1000;
                     const speed = uploadedBytes / elapsed;
                     const remaining = (file.size - uploadedBytes) / speed;
+
                     progressText.textContent = `${formatBytes(uploadedBytes)} / ${formatBytes(file.size)}`;
                     uploadSpeed.textContent = ` • ${formatBytes(speed)}/s • ${formatTime(remaining)} kaldı`;
                 }
 
+                // 3. Upload tamamla
                 const completeResponse = await fetch('upload_handler.php', {
                     method: 'POST',
-                    body: new URLSearchParams({ action: 'complete', csrf_token: csrfToken, uploadId: currentUpload })
+                    body: new URLSearchParams({
+                        action: 'complete',
+                        csrf_token: csrfToken,
+                        uploadId: currentUpload
+                    })
                 });
-                const completeData = await completeResponse.json();
-                if (!completeData.success) throw new Error(completeData.error);
 
+                const completeData = await completeResponse.json();
+                if (!completeData.success) {
+                    throw new Error(completeData.error);
+                }
+
+                // Başarılı
                 progressContainer.style.display = 'none';
                 showMessage(`Dosya başarıyla yüklendi!<br><strong>İndirme Linki:</strong><br><input type="text" value="${completeData.downloadUrl}" class="link-input" readonly onclick="this.select(); document.execCommand('copy');">`, 'success');
+
+                // Formu sıfırla
                 resetForm();
+
             } catch (error) {
                 progressContainer.style.display = 'none';
                 uploadBtn.style.display = 'block';
                 passwordSection.style.display = 'block';
                 showMessage(error.message, 'error');
+
+                // İptal edildi ise temizle
                 if (currentUpload) {
-                    fetch('upload_handler.php', { method: 'POST', body: new URLSearchParams({ action: 'cancel', csrf_token: csrfToken, uploadId: currentUpload }) });
+                    fetch('upload_handler.php', {
+                        method: 'POST',
+                        body: new URLSearchParams({
+                            action: 'cancel',
+                            csrf_token: csrfToken,
+                            uploadId: currentUpload
+                        })
+                    });
                 }
             }
         });
 
-        cancelBtn.addEventListener('click', () => { uploadCancelled = true; });
+        // İptal butonu
+        cancelBtn.addEventListener('click', () => {
+            uploadCancelled = true;
+        });
 
         function resetForm() {
             fileInput.value = '';
